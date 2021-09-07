@@ -1,46 +1,52 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int main(int argc, char **argv) {
-    int n = 10;
-	if (argc == 2)
-		n = atoi(argv[1]);
-	if (n == 0)
-		n = 10;
+int* sieve(int size) {
+	int *arr = malloc(sizeof(int) * size);
+	arr[0] = 0;
+	arr[1] = 0;	
+	for (int i = 2; i < size; i++)
+		arr[i] = 1;
 
-	int m = 100;
-	if (n > 20)
-		m = 500;
-	if (n > 50)
-		m = 1000;
-    	if (n > 100)
-        		m = 10000;
-	if (n > 500)
-		m = 100000;
-    	if (n > 750)
-        		m = 1000000;
-
-	int sieve[m];
-	sieve[0] = 0;
-	sieve[1] = 0;	
-	for (int i = 2; i < m; i++)
-		sieve[i] = 1;
-
-	for (int i = 2; i < m; i++) {
-		if (sieve[i] == 1) {
-			for (int j = 2; i * j < m; j++) {
-				sieve[i*j] = 0;
+	for (int i = 2; i < size; i++) {
+		if (arr[i] == 1) {
+			for (int j = 2; i * j < size; j++) {
+				arr[i*j] = 0;
 			}
 		}
 	}
 
+	return arr;
+}
+
+int main(int argc, char **argv) {
+    	int n = atoi(argv[1]);
+	int size = n * 100;
+	int *arr = sieve(size);
 	int count = 0;
-	for (int i = 0; i < m && count < n; i++) {
-		if (sieve[i] == 1) {
-			printf(count == n - 1 ? "%d\n" : "%d ", i);
-			count++;
+
+	while (count < n) {
+		for (int i = 0; i < size; i++) {
+			if (arr[i] == 1) {
+				count++;
+			}
 		}
+		if (count < n) {
+			size *= 100;
+			free(arr);
+			arr = sieve(size);
+			count = 0;
+		}	
 	}
-    	printf("Printed first %d primes\n", count);
+
+	count = 0;
+	for (int i = 0; i < size && count < n; i++) {
+		if (arr[i] == 1) {
+			printf(count < n - 1 ? "%d " : "%d\n", i);
+			count++; 
+		}
+	}		
+
+    	printf("Printed first %d primes\n", n);
 	return 0;
 }
