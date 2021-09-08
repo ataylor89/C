@@ -5,8 +5,7 @@
 int main(int argc, char **argv) {
 	int n = atoi(argv[1]);
 	int *arr = primes(n);
-	for (int i = 0; i < n; i++) {
-		printf(i < n-1 ? "%d " : "%d\n", arr[i]);
-	}
+	char *str = itos(arr, n, " ");
+	puts(str);
 	return 0;
 }

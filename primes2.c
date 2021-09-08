@@ -1,3 +1,7 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
 #include "primes2.h"
 
 int* sieve(int size) {
@@ -47,4 +51,26 @@ int *primes(int n) {
 	}		
 
     	return primesarr;
+}
+
+char *itos(int *primes, int n, char *delim) {
+	int len = 100;
+	char *str = malloc(sizeof(char) * len);
+	int totalsize = 0;
+	for (int i = 0; i < n; i++) {
+		int size = (int) (floor(log10(primes[i])) + 1);
+		totalsize += size;
+		if (i < n -1)
+			totalsize += strlen(delim);
+		if (totalsize > len) {
+			len *= 100;
+			str = realloc(str, len);
+		}	
+		char nums[size];
+		sprintf(nums, "%d", primes[i]);
+		strcat(str, nums);
+		if (i < n - 1)
+			strcat(str, delim);
+	}
+	return str;	
 }
