@@ -1,5 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include "primes2.h"
 
 int* sieve(int size) {
