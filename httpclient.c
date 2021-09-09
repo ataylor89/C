@@ -7,12 +7,12 @@
 #include <netdb.h>
 #include <unistd.h>
 
-int open_clientfd(char *hostname, int port) {
-	int clientfd;
+int connect_to_server(char *hostname, int port) {
+	int fd;
 	struct hostent *hp;
 	struct sockaddr_in serveraddr;
 
-	if ((clientfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+	if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 		return -1;
 
 	if ((hp = gethostbyname(hostname)) == NULL)
@@ -23,9 +23,10 @@ int open_clientfd(char *hostname, int port) {
 	bcopy((char *)hp->h_addr_list[0], (char *)&serveraddr.sin_addr.s_addr, hp->h_length);
 	serveraddr.sin_port = htons(port);
 
-	if (connect(clientfd, (struct sockaddr *) &serveraddr, sizeof(serveraddr)) < 0)
+	if (connect(fd, (struct sockaddr *) &serveraddr, sizeof(serveraddr)) < 0)
 		return -1;
-	return clientfd;
+
+	return fd;
 }
 
 int main(int argc, char **argv) {
@@ -37,7 +38,7 @@ int main(int argc, char **argv) {
 	char request[1000];
 	char response[1000];
 
-	int fd = open_clientfd(argv[1], 80);
+	int fd = connect_to_server(argv[1], 80);
 	printf("Socket file descriptor: %d\n", fd);
 	
 	sprintf(request, "GET / HTTP/1.1\r\nHost: %s\r\n\r\n", argv[1]);
