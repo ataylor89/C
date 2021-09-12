@@ -56,7 +56,7 @@ void *ping_loop(void *ptr) {
 	return NULL; 
 }
 
-char readline(char *buf, int maxlen) {
+int readline(char *buf, int maxlen) {
 	int n;
 	char c = 0;
 	for (n=0; n < maxlen; n++) {
