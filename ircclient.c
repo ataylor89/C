@@ -9,6 +9,7 @@
 #include <pthread.h>
 
 GtkWidget *win;
+GtkWidget *scr;
 GtkWidget *tv;
 GtkTextBuffer *tb;
 GtkTextIter iter;
@@ -62,7 +63,7 @@ void *ping_loop(void *ptr) {
 
 char readline(char *buf, int maxlen) {
 	int n;
-	char c;
+	char c = 0;
 	for (n=0; n < maxlen; n++) {
 		read(fd, &c, 1);
 		buf[n] = c;
@@ -76,8 +77,17 @@ void *read_loop(void *ptr) {
 	int maxlen = 100;
 	char buf[maxlen];
 	while (true) {
-		readline(buf, maxlen);
-		gtk_text_buffer_insert(tb, &iter, buf, strlen(buf));
+		int n = readline(buf, maxlen);
+		int m = gtk_text_buffer_get_char_count(tb);
+		if (m > 10000) {
+			GtkTextIter start_iter, end_iter;
+			gtk_text_buffer_get_start_iter(tb, &start_iter);
+			gtk_text_buffer_get_end_iter(tb, &end_iter);
+			gtk_text_buffer_delete(tb, &start_iter, &end_iter);	
+			gtk_text_buffer_get_start_iter(tb, &iter);
+		}
+		gtk_text_buffer_insert(tb, &iter, buf, n);
+		sleep(1);
 	}
 }
 
@@ -97,7 +107,9 @@ static void activate(GApplication *app, gpointer *data) {
 	win = gtk_application_window_new(GTK_APPLICATION(app));
 	gtk_window_set_title(GTK_WINDOW(win), "IRC Client");
 	gtk_window_set_default_size(GTK_WINDOW(win), 800, 800);
+	scr = gtk_scrolled_window_new();
 	tv = gtk_text_view_new();
+	gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scr), tv);
 	tb = gtk_text_view_get_buffer(GTK_TEXT_VIEW(tv));
 	gtk_text_buffer_get_start_iter(tb, &iter);
 	gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(tv), GTK_WRAP_WORD_CHAR);
@@ -111,10 +123,10 @@ static void activate(GApplication *app, gpointer *data) {
 	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
 	gtk_box_append(GTK_BOX(hbox), entry);
 	gtk_box_append(GTK_BOX(hbox), button);
-	gtk_box_append(GTK_BOX(vbox), tv);
+	gtk_box_append(GTK_BOX(vbox), scr);
 	gtk_box_append(GTK_BOX(vbox), hbox);
-	gtk_widget_set_hexpand(tv, TRUE);
-	gtk_widget_set_vexpand(tv, TRUE);
+	gtk_widget_set_hexpand(scr, TRUE);
+	gtk_widget_set_vexpand(scr, TRUE);
 	gtk_window_set_child(GTK_WINDOW(win), vbox);
 	gtk_widget_show(win);
 	fd = connect_to_server(myargs->hostname, myargs->port);
