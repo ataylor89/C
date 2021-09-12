@@ -15,15 +15,10 @@ GtkTextBuffer *tb;
 GtkTextIter iter;
 GtkWidget *entry, *button;
 GtkEntryBuffer *eb;
-GtkWidget *hbox, *vbox;	
+GtkWidget *hbox, *vbox;
 int fd = -1;
 pthread_t pingthread;
 pthread_t readthread;
-
-typedef struct {
-	char *hostname;
-	int port;
-} cl_args;
 
 int connect_to_server(char *hostname, int port) {
 	int fd;
@@ -48,11 +43,11 @@ int connect_to_server(char *hostname, int port) {
 }
 
 void *ping_loop(void *ptr) {
-	cl_args *myargs = (cl_args *) ptr;
-	int size = strlen(myargs->hostname) + 6;
+	char *hostname = (char *) ptr;
+	int size = strlen(hostname) + 6;
 	char ping_msg[size];
-	sprintf(ping_msg, "PING %s\n", myargs->hostname);
-	while (true) {
+	sprintf(ping_msg, "PING %s\n", hostname);
+	while (fd > 0) {
 		if (write(fd, ping_msg, size) < 0)
 			return NULL;
 		gtk_text_buffer_insert(tb, &iter, ping_msg, size);
@@ -73,10 +68,10 @@ char readline(char *buf, int maxlen) {
 	return n;
 }
 
-void *read_loop(void *ptr) {
+void *read_loop() {
 	int maxlen = 100;
 	char buf[maxlen];
-	while (true) {
+	while (fd > 0) {
 		int n = readline(buf, maxlen);
 		int m = gtk_text_buffer_get_char_count(tb);
 		if (m > 10000) {
@@ -89,6 +84,7 @@ void *read_loop(void *ptr) {
 		gtk_text_buffer_insert(tb, &iter, buf, n);
 		sleep(1);
 	}
+	return NULL;
 }
 
 void send_message(GtkWidget *widget, gpointer *data) {
@@ -97,13 +93,28 @@ void send_message(GtkWidget *widget, gpointer *data) {
 	sprintf(msg, "%s\n", text);
 	gtk_text_buffer_insert(tb, &iter, text, -1);
 	gtk_text_buffer_insert(tb, &iter, "\n", -1);
-	if (fd > 0) {
-		write(fd, msg, strlen(msg));
+	if (fd < 0 && strncmp(msg, "connect", 7) == 0) {
+		const char delim[2] = " ";
+		strtok(msg, delim);
+		char *hostname = strtok(NULL, delim);	
+		int port = atoi(strtok(NULL, delim));
+		fd = connect_to_server(hostname, port);
+		if (fd > 0) {
+			pthread_create(&pingthread, NULL, ping_loop, (void *) hostname);
+			pthread_create(&readthread, NULL, read_loop, NULL);
+		}
 	}
+	else if (fd > 0 && strncmp(msg, "disconnect", 10) == 0) {
+		close(fd);
+		fd = -1;
+	}
+	else if (fd > 0) {
+		write(fd, msg, strlen(msg));	
+	}
+	gtk_entry_buffer_delete_text(eb, 0, -1);
 }
 
 static void activate(GApplication *app, gpointer *data) {	
-	cl_args *myargs = (cl_args *) data;
 	win = gtk_application_window_new(GTK_APPLICATION(app));
 	gtk_window_set_title(GTK_WINDOW(win), "IRC Client");
 	gtk_window_set_default_size(GTK_WINDOW(win), 800, 800);
@@ -129,30 +140,14 @@ static void activate(GApplication *app, gpointer *data) {
 	gtk_widget_set_vexpand(scr, TRUE);
 	gtk_window_set_child(GTK_WINDOW(win), vbox);
 	gtk_widget_show(win);
-	fd = connect_to_server(myargs->hostname, myargs->port);
-	if (fd > 0) {
-		pthread_create(&pingthread, NULL, ping_loop, (void *) myargs);
-		pthread_create(&readthread, NULL, read_loop, NULL);
-	}
 }
 
 int main(int argc, char **argv) {
-	/*
-	if (argc != 3) {
-		fprintf(stderr, "usage: %s <hostname> <port>\n", argv[0]);
-		return 0;
-	}
-	*/
-
-	cl_args myargs;
-	myargs.hostname = "irc.dal.net";
-	myargs.port = 6667;
-
 	GtkApplication *app;
 	int stat;
 
 	app = gtk_application_new("com.ircclient", G_APPLICATION_FLAGS_NONE);
-	g_signal_connect(app, "activate", G_CALLBACK(activate), &myargs);
+	g_signal_connect(app, "activate", G_CALLBACK(activate), NULL);
 	stat = g_application_run(G_APPLICATION(app), argc, argv);
 	g_object_unref(app);
 	return stat;
